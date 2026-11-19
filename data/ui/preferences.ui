@@ -960,6 +960,41 @@ along with plank.  If not, see <http://www.gnu.org/licenses/>.
                 <property name="top_attach">8</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkLabel" id="l_window_click">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="halign">end</property>
+                <property
+                  name="label"
+                  translatable="yes"
+                >Click with Several Windows:</property>
+                <property name="justify">right</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">11</property>
+                <property name="width">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBoxText" id="cb_window_click">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="hexpand">True</property>
+                <items>
+                  <item id="0" translatable="yes">Show all windows</item>
+                  <item id="1" translatable="yes">Show the last window</item>
+                  <item id="2" translatable="yes">Cycle through windows</item>
+                  <item id="3" translatable="yes">Show window previews</item>
+                </items>
+              </object>
+              <packing>
+                <property name="left_attach">2</property>
+                <property name="top_attach">11</property>
+                <property name="width">2</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="name">grid_behaviour</property>

@@ -17,6 +17,8 @@
 - List the home folder and the folders bookmarked in the file manager under Places in the file manager's menu
 - Add Minimize or Restore, Maximize or Unmaximize and, for applications without such an action of their own, New Window to a running application's menu
 - Add tests for telling applications by their command lines and for reading bookmarks
+- Add a Click with Several Windows setting for what a click on an item with more than one window does: show all of them, as before, show only the one in front last and minimize it on the next click, cycle through them, or show their previews to choose from, whether previews on hover are on or not
+- Keep window previews a click opened from closing again when the button's release arrives twice
 
 ## 0.11.178 "Reloaded" (2026-10-17)
 
