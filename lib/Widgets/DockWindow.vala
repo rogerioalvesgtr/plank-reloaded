@@ -61,6 +61,7 @@ namespace Plank {
      * The popup menu for this dock.
      */
     Gtk.Menu? menu;
+    bool popup_visible = false;
     Gee.ArrayList<Gtk.MenuItem>? menu_items;
 
     uint hover_reposition_timer_id = 0U;
@@ -202,7 +203,7 @@ namespace Plank {
       if (controller.drag_manager.InternalDragActive)
         return Gdk.EVENT_STOP;
 
-      if (HoveredItem != null && ClickedItem == null && menu_is_visible ())
+      if (HoveredItem != null && ClickedItem == null && menu != null && menu.get_visible ())
         menu.hide ();
 
       // Make sure the HoveredItem is still the same since button-pressed
@@ -618,7 +619,30 @@ namespace Plank {
      * If the popup menu is currently visible.
      */
     public bool menu_is_visible () {
-      return (menu != null && menu.get_visible ());
+      return ((menu != null && menu.get_visible ()) || popup_visible);
+    }
+
+    /**
+     * Tells the dock that a popup of one of its items, such as a
+     * directory's stack, shows or went away. While it shows, the dock
+     * behaves as with its menu open: it doesn't hide and keeps the item
+     * hovered.
+     *
+     * @param visible whether the popup shows
+     */
+    internal void set_popup_visible (bool visible) {
+      if (popup_visible == visible)
+        return;
+
+      popup_visible = visible;
+
+      if (visible) {
+        on_menu_show ();
+        controller.hide_manager.update_hovered ();
+      } else {
+        recheck_hovered ();
+        controller.renderer.animated_draw ();
+      }
     }
 
     /**

@@ -27,6 +27,9 @@ namespace Plank {
   public class FileDockItem : DockItem {
     const string DEFAULT_ICONS = "inode-directory;;folder";
 
+    FanWindow? fan = null;
+    StackWindow? stack = null;
+
     public File OwnedFile { get; protected construct set; }
 
     FileMonitor? dir_monitor;
@@ -60,6 +63,11 @@ namespace Plank {
 
     ~FileDockItem () {
       stop_monitor ();
+
+      if (fan != null)
+        fan.destroy ();
+      if (stack != null)
+        stack.destroy ();
     }
 
     protected override void load_from_launcher () {
@@ -115,15 +123,12 @@ namespace Plank {
       return false;
     }
 
+    // A list is the item's menu, which a left click then shows as well
     void setup_buttons () {
-      switch (Prefs.DirectoryStyle) {
-      case DirStyle.SIMPLE :
-        Button = PopupButton.RIGHT;
-        break;
-      case DirStyle.TILE:
+      if (Prefs.StackStyle == StackView.LIST)
         Button = PopupButton.RIGHT | PopupButton.LEFT;
-        break;
-      }
+      else
+        Button = PopupButton.RIGHT;
     }
 
     protected override void draw_icon_fast (Surface surface) {
@@ -220,12 +225,125 @@ namespace Plank {
     }
 
     protected override AnimationType on_clicked (PopupButton button, Gdk.ModifierType mod, uint32 event_time) {
+      if (button == PopupButton.LEFT && show_stack ())
+        return AnimationType.NONE;
+
       if (button == PopupButton.LEFT || button == PopupButton.MIDDLE) {
         launch ();
         return AnimationType.BOUNCE;
       }
 
       return AnimationType.NONE;
+    }
+
+    /**
+     * Shows a directory's entries next to the item, as a fan or a grid,
+     * if the item is set to and the directory has any.
+     *
+     * @return whether they were shown
+     */
+    bool show_stack () {
+      if (Prefs.StackStyle == StackView.FOLDER || Prefs.StackStyle == StackView.LIST)
+        return false;
+
+      if (OwnedFile.query_file_type (0) != FileType.DIRECTORY)
+        return false;
+
+      unowned DockController? controller = get_dock ();
+      if (controller == null)
+        return false;
+
+      var entries = get_stack_entries (OwnedFile);
+      if (entries.is_empty)
+        return false;
+
+      unowned PositionManager position_manager = controller.position_manager;
+      var area = position_manager.get_monitor_geometry ();
+
+      int x, y;
+      position_manager.get_hover_position (this, out x, out y);
+
+      // A fan has its entries and one more, which opens the directory
+      var fan_count = int.min (entries.size, STACK_FAN_MAX_ENTRIES) + 1;
+      var fan_wanted = (Prefs.StackStyle == StackView.FAN);
+
+      if (Prefs.StackStyle != StackView.GRID
+          && stack_shows_fan (fan_wanted, position_manager.Position, entries.size)
+          && FanWindow.fits (fan_count, x, y, area))
+        show_fan (controller, entries, x, y);
+      else
+        show_grid (controller, x, y, area);
+
+      return true;
+    }
+
+    void show_fan (DockController controller, Gee.ArrayList<StackEntry> entries, int x, int y) {
+      var shown = new Gee.ArrayList<StackEntry> ();
+      foreach (var entry in entries) {
+        if (shown.size >= STACK_FAN_MAX_ENTRIES)
+          break;
+        shown.add (entry);
+      }
+
+      var remaining = entries.size - shown.size;
+      var open_text = remaining > 0
+        ? ngettext ("%d More in File Browser", "%d More in File Browser", remaining).printf (remaining)
+        : _("Open in File Browser");
+      shown.add (new StackEntry (OwnedFile, open_text, "folder-open", false, false));
+
+      if (fan == null) {
+        fan = new FanWindow ();
+        fan.activated.connect (open_stack_entry);
+        track_popup (fan);
+      }
+
+      fan.show_fan (shown, x, y);
+    }
+
+    void show_grid (DockController controller, int x, int y, Gdk.Rectangle area) {
+      if (stack == null) {
+        stack = new StackWindow ();
+        stack.activated.connect (open_stack_entry);
+        stack.open_requested.connect (open_stack_directory);
+        track_popup (stack);
+      }
+
+      stack.show_stack (OwnedFile, get_stack_entries, Prefs.LargeIcons, controller.position_manager.Position, x, y, area);
+    }
+
+    // While a stack shows, the dock stays as it is, as with a menu
+    void track_popup (Gtk.Window popup) {
+      popup.show.connect (popup_shown);
+      popup.hide.connect (popup_hidden);
+    }
+
+    void popup_shown () {
+      unowned DockController? controller = get_dock ();
+      if (controller != null)
+        controller.window.set_popup_visible (true);
+    }
+
+    void popup_hidden () {
+      unowned DockController? controller = get_dock ();
+      if (controller != null)
+        controller.window.set_popup_visible (false);
+    }
+
+    void open_stack_directory (File directory) {
+      System.get_default ().open (directory);
+
+      ClickedAnimation = AnimationType.BOUNCE;
+      LastClicked = GLib.get_monotonic_time ();
+    }
+
+    void open_stack_entry (StackEntry entry) {
+      if (entry.is_launcher)
+        System.get_default ().launch (entry.file);
+      else
+        System.get_default ().open (entry.file);
+
+      ClickedAnimation = AnimationType.BOUNCE;
+      LastClicked = GLib.get_monotonic_time ();
     }
 
     public override bool can_be_removed () {
@@ -261,23 +379,30 @@ namespace Plank {
       return get_file_menu_items ();
     }
 
+    // The directory's own entries come first, where they are found
+    // however many files follow them
     Gee.ArrayList<Gtk.MenuItem> get_dir_menu_items () {
       var items = new Gee.ArrayList<Gtk.MenuItem> ();
-      var sorted_items = create_file_menu_items (OwnedFile);
 
-      foreach (var data in sorted_items) {
-        items.add (data.menu_item);
+      var item = create_menu_item (_("_Open in File Browser"), "gtk-open");
+      item.activate.connect (() => {
+        launch ();
+      });
+      items.add (item);
+
+      if (OwnedFile.is_native ()) {
+        item = create_menu_item (_("Open in _Terminal"), "utilities-terminal");
+        item.activate.connect (() => {
+          open_terminal (OwnedFile);
+        });
+        items.add (item);
       }
-
-      items.add (new Gtk.SeparatorMenuItem ());
 
       var view_options_item = new Gtk.MenuItem.with_mnemonic (_("_View Options"));
       view_options_item.activate.connect (() => {
         show_view_options_dialog ();
       });
       items.add (view_options_item);
-
-      items.add (new Gtk.SeparatorMenuItem ());
 
       unowned DefaultApplicationDockItemProvider? default_provider = (Container as DefaultApplicationDockItemProvider);
       if (default_provider != null
@@ -288,11 +413,13 @@ namespace Plank {
         items.add (delete_item);
       }
 
-      var item = create_menu_item (_("_Open in File Browser"), "gtk-open");
-      item.activate.connect (() => {
-        launch ();
-      });
-      items.add (item);
+      items.add (new Gtk.SeparatorMenuItem ());
+
+      var sorted_items = create_file_menu_items (OwnedFile);
+
+      foreach (var data in sorted_items) {
+        items.add (data.menu_item);
+      }
 
       return items;
     }
@@ -338,6 +465,18 @@ namespace Plank {
       style_combo.active_id = (Prefs.DirectoryStyle == DirStyle.SIMPLE) ? "simple" : "tile";
       style_combo.set_hexpand (true);
 
+      var stack_label = new Gtk.Label (_("View Content As:"));
+      stack_label.set_halign (Gtk.Align.START);
+
+      var stack_combo = new Gtk.ComboBoxText ();
+      stack_combo.append ("automatic", _("Automatic"));
+      stack_combo.append ("fan", _("Fan"));
+      stack_combo.append ("grid", _("Grid"));
+      stack_combo.append ("list", _("List"));
+      stack_combo.append ("folder", _("Folder"));
+      stack_combo.active_id = stack_style_id (Prefs.StackStyle);
+      stack_combo.set_hexpand (true);
+
       var large_icons_label = new Gtk.Label (_("Large Icons:"));
       large_icons_label.set_halign (Gtk.Align.START);
 
@@ -356,10 +495,12 @@ namespace Plank {
       grid.attach (sort_combo, 1, 0, 1, 1);
       grid.attach (style_label, 0, 1, 1, 1);
       grid.attach (style_combo, 1, 1, 1, 1);
-      grid.attach (large_icons_label, 0, 2, 1, 1);
-      grid.attach (large_icons_switch, 1, 2, 1, 1);
-      grid.attach (hidden_label, 0, 3, 1, 1);
-      grid.attach (hidden_switch, 1, 3, 1, 1);
+      grid.attach (stack_label, 0, 2, 1, 1);
+      grid.attach (stack_combo, 1, 2, 1, 1);
+      grid.attach (large_icons_label, 0, 3, 1, 1);
+      grid.attach (large_icons_switch, 1, 3, 1, 1);
+      grid.attach (hidden_label, 0, 4, 1, 1);
+      grid.attach (hidden_switch, 1, 4, 1, 1);
 
       content_area.pack_start (grid, true, true, 0);
 
@@ -382,6 +523,12 @@ namespace Plank {
             }
           }
 
+          var new_stack = stack_combo.active_id;
+          if (new_stack != null && stack_style_from_id (new_stack) != Prefs.StackStyle) {
+            Prefs.StackStyle = stack_style_from_id (new_stack);
+            setup_buttons ();
+          }
+
           var new_large_icons = large_icons_switch.get_active ();
           if (new_large_icons != Prefs.LargeIcons) {
             Prefs.LargeIcons = new_large_icons;
@@ -394,6 +541,38 @@ namespace Plank {
         }
         dialog.destroy ();
       });
+    }
+
+    static string stack_style_id (StackView style) {
+      switch (style) {
+      default:
+      case StackView.AUTOMATIC:
+        return "automatic";
+      case StackView.FAN:
+        return "fan";
+      case StackView.GRID:
+        return "grid";
+      case StackView.LIST:
+        return "list";
+      case StackView.FOLDER:
+        return "folder";
+      }
+    }
+
+    static StackView stack_style_from_id (string id) {
+      switch (id) {
+      default:
+      case "automatic":
+        return StackView.AUTOMATIC;
+      case "fan":
+        return StackView.FAN;
+      case "grid":
+        return StackView.GRID;
+      case "list":
+        return StackView.LIST;
+      case "folder":
+        return StackView.FOLDER;
+      }
     }
 
     Gee.ArrayList<Gtk.MenuItem> get_file_menu_items () {
@@ -412,6 +591,10 @@ namespace Plank {
       item.activate.connect (launch);
       items.add (item);
 
+      item = create_menu_item (_("Open _With…"), "");
+      item.activate.connect (() => show_open_with_dialog (OwnedFile));
+      items.add (item);
+
       item = create_menu_item (_("Open Containing _Folder"), "folder");
       item.activate.connect (() => {
         System.get_default ().open (OwnedFile.get_parent ());
@@ -423,11 +606,16 @@ namespace Plank {
       return items;
     }
 
-    Gee.ArrayList<FileSortData> create_file_menu_items (File directory) {
-      var sorted_items = new Gee.ArrayList<FileSortData> ();
+    /**
+     * Lists a directory's entries, sorted as the item is set to.
+     *
+     * @param directory the item's directory or one below it
+     * @return the entries
+     */
+    internal Gee.ArrayList<StackEntry> get_stack_entries (File directory) {
+      var entries = new Gee.ArrayList<StackEntry> ();
 
       get_files (directory).map_iterator ().foreach ((display_name, file) => {
-        Gtk.MenuItem item;
         string content_type = "", creation_date = "", modified_date = "", icon, text;
         int64 size = 0;
         var uri = file.get_uri ();
@@ -459,20 +647,94 @@ namespace Plank {
           // Use default values if information can't be determined
         }
 
-        if (uri.has_suffix (".desktop")) {
+        var is_launcher = uri.has_suffix (".desktop");
+        if (is_launcher) {
           ApplicationDockItem.parse_launcher (uri, out icon, out text);
-          item = create_file_menu_item (text, icon, true, true);
+        } else {
+          icon = DrawingService.get_icon_from_file (file) ?? "";
+          text = display_name ?? "";
+        }
+
+        entries.add (new StackEntry (file, text ?? "", icon ?? "", !is_launcher && content_type == "directory", is_launcher,
+                                     content_type, creation_date, modified_date, size));
+
+        return true;
+      });
+
+      entries.sort ((a, b) => {
+        bool a_is_dir = (a.content_type == "directory");
+        bool b_is_dir = (b.content_type == "directory");
+
+        if (Prefs.SortBy == "kind" && a_is_dir != b_is_dir) {
+          return a_is_dir ? -1 : 1;
+        }
+
+        switch (Prefs.SortBy) {
+          case "name":
+            return compare_names (a.text, b.text);
+          case "date-created":
+            string date_a = a.creation_date;
+            string date_b = b.creation_date;
+
+            if (date_a == date_b || date_a == "" || date_b == "") {
+              return compare_names (a.text, b.text);
+            }
+
+            return date_b.collate (date_a);
+          case "date-modified":
+            string date_a = a.modified_date;
+            string date_b = b.modified_date;
+
+            if (date_a == date_b || date_a == "" || date_b == "") {
+              return compare_names (a.text, b.text);
+            }
+
+            return date_b.collate (date_a);
+          case "kind":
+            int type_compare = a.content_type.collate (b.content_type);
+            if (type_compare != 0) {
+              return type_compare;
+            }
+
+            return compare_names (a.text, b.text);
+          case "size":
+            if (a.size == b.size) {
+              return compare_names (a.text, b.text);
+            }
+
+            return (b.size > a.size) ? 1 : -1;
+          default:
+            return compare_names (a.text, b.text);
+        }
+      });
+
+      return entries;
+    }
+
+    // Names in the order file managers list them, with "file 2" before
+    // "file 10"
+    static int compare_names (string a, string b) {
+      return strcmp (a.collate_key_for_filename (), b.collate_key_for_filename ());
+    }
+
+    Gee.ArrayList<FileSortData> create_file_menu_items (File directory) {
+      var sorted_items = new Gee.ArrayList<FileSortData> ();
+
+      foreach (var entry in get_stack_entries (directory)) {
+        Gtk.MenuItem item;
+        var file = entry.file;
+
+        if (entry.is_launcher) {
+          item = create_file_menu_item (entry.text, entry.icon, true, true);
           item.activate.connect (() => {
             System.get_default ().launch (file);
             ClickedAnimation = AnimationType.BOUNCE;
             LastClicked = GLib.get_monotonic_time ();
           });
         } else {
-          icon = DrawingService.get_icon_from_file (file) ?? "";
-          text = display_name ?? "";
-          item = create_file_menu_item (text, icon, true, false);
+          item = create_file_menu_item (entry.text, entry.icon, true, false);
 
-          if (content_type == "directory") {
+          if (entry.is_directory) {
             var nested_submenu = new Gtk.Menu ();
             item.set_submenu (nested_submenu);
 
@@ -493,58 +755,9 @@ namespace Plank {
           }
         }
 
-        var sort_data = new FileSortData (creation_date, modified_date, text, content_type, size, item);
-        sorted_items.add (sort_data);
-
-        return true;
-      });
-
-      sorted_items.sort ((a, b) => {
-        bool a_is_dir = (a.content_type == "directory");
-        bool b_is_dir = (b.content_type == "directory");
-
-        if (Prefs.SortBy == "kind" && a_is_dir != b_is_dir) {
-          return a_is_dir ? -1 : 1;
-        }
-
-        switch (Prefs.SortBy) {
-          case "name":
-            return a.display_name.collate (b.display_name);
-          case "date-created":
-            string date_a = a.creation_date;
-            string date_b = b.creation_date;
-
-            if (date_a == date_b || date_a == "" || date_b == "") {
-              return a.display_name.collate (b.display_name);
-            }
-
-            return date_b.collate (date_a);
-          case "date-modified":
-            string date_a = a.modified_date;
-            string date_b = b.modified_date;
-
-            if (date_a == date_b || date_a == "" || date_b == "") {
-              return a.display_name.collate (b.display_name);
-            }
-
-            return date_b.collate (date_a);
-          case "kind":
-            int type_compare = a.content_type.collate (b.content_type);
-            if (type_compare != 0) {
-              return type_compare;
-            }
-
-            return a.display_name.collate (b.display_name);
-          case "size":
-            if (a.size == b.size) {
-              return a.display_name.collate (b.display_name);
-            }
-
-            return (b.size > a.size) ? 1 : -1;
-          default:
-            return a.display_name.collate (b.display_name);
-        }
-      });
+        sorted_items.add (new FileSortData (entry.creation_date, entry.modified_date, entry.text, entry.content_type,
+                                            entry.size, item));
+      }
 
       if (sorted_items.size == 0) {
         var empty_item = new Gtk.MenuItem.with_label (_("Empty Directory"));
@@ -556,15 +769,9 @@ namespace Plank {
       return sorted_items;
     }
 
+    // A subdirectory's own entries come first, next to where its submenu
+    // opens, however many files follow them
     void populate_directory_submenu (File directory, Gtk.Menu submenu) {
-      var sorted_items = create_file_menu_items (directory);
-
-      foreach (var data in sorted_items) {
-        submenu.append (data.menu_item);
-      }
-
-      submenu.append (new Gtk.SeparatorMenuItem ());
-
       var open_item = create_menu_item (_("_Open in File Browser"), "gtk-open");
       open_item.activate.connect (() => {
         System.get_default ().open (directory);
@@ -572,6 +779,20 @@ namespace Plank {
         LastClicked = GLib.get_monotonic_time ();
       });
       submenu.append (open_item);
+
+      if (directory.is_native ()) {
+        var terminal_item = create_menu_item (_("Open in _Terminal"), "utilities-terminal");
+        terminal_item.activate.connect (() => {
+          open_terminal (directory);
+        });
+        submenu.append (terminal_item);
+      }
+
+      submenu.append (new Gtk.SeparatorMenuItem ());
+
+      foreach (var data in create_file_menu_items (directory)) {
+        submenu.append (data.menu_item);
+      }
 
       submenu.show_all ();
     }

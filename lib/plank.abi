@@ -84,6 +84,11 @@ enum PlankPopupButton 001 PLANK_POPUP_BUTTON_NONE = 1 << 0
 enum PlankPopupButton 002 PLANK_POPUP_BUTTON_LEFT = 1 << 1
 enum PlankPopupButton 003 PLANK_POPUP_BUTTON_MIDDLE = 1 << 2
 enum PlankPopupButton 004 PLANK_POPUP_BUTTON_RIGHT = 1 << 3
+enum PlankStackView 001 PLANK_STACK_VIEW_AUTOMATIC
+enum PlankStackView 002 PLANK_STACK_VIEW_FAN
+enum PlankStackView 003 PLANK_STACK_VIEW_GRID
+enum PlankStackView 004 PLANK_STACK_VIEW_LIST
+enum PlankStackView 005 PLANK_STACK_VIEW_FOLDER
 enum PlankSurfaceCacheFlags 001 PLANK_SURFACE_CACHE_FLAGS_NONE = 0
 enum PlankSurfaceCacheFlags 002 PLANK_SURFACE_CACHE_FLAGS_ALLOW_DOWNSCALE = 1 << 0
 enum PlankSurfaceCacheFlags 003 PLANK_SURFACE_CACHE_FLAGS_ALLOW_UPSCALE = 1 << 1
@@ -380,6 +385,7 @@ function plank_dock_item_preferences_get_LargeIcons gboolean plank_dock_item_pre
 function plank_dock_item_preferences_get_Launcher const gchar* plank_dock_item_preferences_get_Launcher (PlankDockItemPreferences* self)
 function plank_dock_item_preferences_get_ShowHiddenFiles gboolean plank_dock_item_preferences_get_ShowHiddenFiles (PlankDockItemPreferences* self)
 function plank_dock_item_preferences_get_SortBy const gchar* plank_dock_item_preferences_get_SortBy (PlankDockItemPreferences* self)
+function plank_dock_item_preferences_get_StackStyle PlankStackView plank_dock_item_preferences_get_StackStyle (PlankDockItemPreferences* self)
 function plank_dock_item_preferences_get_type GType plank_dock_item_preferences_get_type (void)
 function plank_dock_item_preferences_new PlankDockItemPreferences* plank_dock_item_preferences_new (void)
 function plank_dock_item_preferences_new_with_file PlankDockItemPreferences* plank_dock_item_preferences_new_with_file (GFile* file)
@@ -390,6 +396,7 @@ function plank_dock_item_preferences_set_LargeIcons void plank_dock_item_prefere
 function plank_dock_item_preferences_set_Launcher void plank_dock_item_preferences_set_Launcher (PlankDockItemPreferences* self, const gchar* value)
 function plank_dock_item_preferences_set_ShowHiddenFiles void plank_dock_item_preferences_set_ShowHiddenFiles (PlankDockItemPreferences* self, gboolean value)
 function plank_dock_item_preferences_set_SortBy void plank_dock_item_preferences_set_SortBy (PlankDockItemPreferences* self, const gchar* value)
+function plank_dock_item_preferences_set_StackStyle void plank_dock_item_preferences_set_StackStyle (PlankDockItemPreferences* self, PlankStackView value)
 function plank_dock_item_provider_add_item_with_uri gboolean plank_dock_item_provider_add_item_with_uri (PlankDockItemProvider* self, const gchar* uri, PlankDockItem* target)
 function plank_dock_item_provider_allow_duplicate_item gboolean plank_dock_item_provider_allow_duplicate_item (PlankDockItemProvider* self, const gchar* uri)
 function plank_dock_item_provider_construct PlankDockItemProvider* plank_dock_item_provider_construct (GType object_type)
@@ -832,6 +839,7 @@ function plank_settings_get_settings GSettings* plank_settings_get_settings (Pla
 function plank_settings_get_type GType plank_settings_get_type (void)
 function plank_settings_reset_all void plank_settings_reset_all (PlankSettings* self)
 function plank_settings_verify void plank_settings_verify (PlankSettings* self, const gchar* name)
+function plank_stack_view_get_type GType plank_stack_view_get_type (void)
 function plank_string_split_combine gchar** plank_string_split_combine (const gchar* s, const gchar* delimiter, gint* result_length1)
 function plank_surface_average_color void plank_surface_average_color (PlankSurface* self, PlankColor* result)
 function plank_surface_cache_clear void plank_surface_cache_clear (PlankSurfaceCache* self)

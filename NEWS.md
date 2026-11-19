@@ -7,6 +7,12 @@
 - Add a per-dock Restrict to Monitor setting that limits a dock to the windows on its own monitor, judged by each window's center: unpinned items show only with a window there, and the indicator, previews, window list, click, scroll and Close act only on those windows (thanks cdmdotnet)
 - Add `plank --monitor-manager`, which runs a dock on each connected monitor, gives each monitor the dock it had before by its EDID, else by its position in the layout, adds and removes docks as monitors come and go, and starts a crashed dock again (thanks cdmdotnet)
 - Add tests for windows on monitors, EDID identities and the monitor manager's choice of docks
+- Show a folder's contents on a click, macOS-style: as a fan rising from a bottom dock when the folder has few entries, else as a grid, with a new "View Content As" choice of Automatic, Fan, Grid, List or Folder in the item's View Options; folders set to the Tile style, whose click showed the list, now follow that choice too
+- Browse subfolders inside the grid, with a way back, the arrow keys, Enter, Backspace and Escape, and a right-click menu on each entry to open it, pick the application to open it with, open a terminal in it or copy its path
+- Put a folder's own menu entries (Open in File Browser, View Options, Keep in Dock) above its contents, in its submenus too, where they stay in reach however many files it holds
+- Add Open in Terminal to folders and their subfolders, using the desktop's configured terminal, and Open With to files on the dock
+- Sort names like file managers do, with "file 2" before "file 10"
+- Add tests for the stack's fan and grid choices, grid shapes and terminal candidates
 
 ## 0.11.178 "Reloaded" (2026-10-17)
 

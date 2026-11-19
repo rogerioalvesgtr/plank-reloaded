@@ -24,6 +24,27 @@ namespace Plank {
   }
 
   /**
+   * What a click on a directory item shows.
+   */
+  public enum StackView {
+    /**
+     * A fan when the directory has few entries and the dock is at the
+     * bottom, else a grid.
+     */
+    AUTOMATIC,
+    FAN,
+    GRID,
+    /**
+     * The directory's entries as a menu, with its subdirectories as submenus.
+     */
+    LIST,
+    /**
+     * Nothing, the directory opens in the file manager.
+     */
+    FOLDER
+  }
+
+  /**
    * Contains preference keys for a dock item.
    */
   public class DockItemPreferences : Preferences {
@@ -41,6 +62,9 @@ namespace Plank {
 
     [Description (nick = "large-icons", blurb = "Use large icons.")]
     public bool LargeIcons { get; set; default = false; }
+
+    [Description (nick = "stack-style", blurb = "What a click on a directory item shows.  If 0, a fan or a grid, chosen automatically.  If 1, a fan.  If 2, a grid.  If 3, a list.  If 4, nothing, the directory opens in the file manager.")]
+    public StackView StackStyle { get; set; default = StackView.AUTOMATIC; }
 
     /**
      * {@inheritDoc}
@@ -76,6 +100,7 @@ namespace Plank {
       DirectoryStyle = DirStyle.SIMPLE;
       ShowHiddenFiles = false;
       LargeIcons = false;
+      StackStyle = StackView.AUTOMATIC;
     }
 
     /**
@@ -90,6 +115,11 @@ namespace Plank {
           } catch (ConvertError e) {
             warning (e.message);
           }
+        break;
+
+      case "StackStyle":
+        if (StackStyle < StackView.AUTOMATIC || StackStyle > StackView.FOLDER)
+          StackStyle = StackView.AUTOMATIC;
         break;
       }
     }

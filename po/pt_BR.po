@@ -779,6 +779,57 @@ msgstr "Restringir ao Monitor:"
 msgid "Assigned to %s by the monitor manager"
 msgstr "Atribuído a %s pelo gerenciador de monitores"
 
+#: lib/Items/FileDockItem.vala lib/Widgets/StackWindow.vala
+msgid "Open in _Terminal"
+msgstr "Abrir no _Terminal"
+
+#: lib/Items/FileDockItem.vala lib/Widgets/StackWindow.vala
+msgid "Open _With…"
+msgstr "Abrir _com…"
+
+#: lib/Items/FileDockItem.vala
+msgid "View Content As:"
+msgstr "Exibir conteúdo como:"
+
+#: lib/Items/FileDockItem.vala
+msgid "Automatic"
+msgstr "Automático"
+
+#: lib/Items/FileDockItem.vala
+msgid "Fan"
+msgstr "Leque"
+
+#: lib/Items/FileDockItem.vala
+msgid "Grid"
+msgstr "Grade"
+
+#: lib/Items/FileDockItem.vala
+msgid "List"
+msgstr "Lista"
+
+#: lib/Items/FileDockItem.vala
+msgid "Folder"
+msgstr "Pasta"
+
+#: lib/Items/FileDockItem.vala lib/Widgets/StackWindow.vala
+msgid "Open in File Browser"
+msgstr "Abrir no Gerenciador de arquivos"
+
+#: lib/Items/FileDockItem.vala lib/Widgets/StackWindow.vala
+#, c-format
+msgid "%d More in File Browser"
+msgid_plural "%d More in File Browser"
+msgstr[0] "Mais %d no Gerenciador de arquivos"
+msgstr[1] "Mais %d no Gerenciador de arquivos"
+
+#: lib/Widgets/StackWindow.vala
+msgid "Back"
+msgstr "Voltar"
+
+#: lib/Widgets/StackWindow.vala
+msgid "_Copy Path"
+msgstr "_Copiar caminho"
+
 #~ msgid "dock"
 #~ msgstr "dock"
 

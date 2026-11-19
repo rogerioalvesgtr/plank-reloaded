@@ -51,10 +51,12 @@ plank_lib_sources = [
   'Services/Worker.vala',
   'Widgets/CompositedWindow.vala',
   'Widgets/DockWindow.vala',
+  'Widgets/FanWindow.vala',
   'Widgets/HoverWindow.vala',
   'Widgets/PoofWindow.vala',
   'Widgets/PreferencesWindow.vala',
   'Widgets/PreviewWindow.vala',
+  'Widgets/StackWindow.vala',
   'Widgets/TitledSeparatorMenuItem.vala',
 ]
 
@@ -66,6 +68,7 @@ plank_internal_lib_sources = [
   'InternalMonitors.vala',
   'InternalPressure.vala',
   'InternalQuarks.vala',
+  'InternalStack.vala',
   'Services/Matcher.vala',
   'Services/WindowControl.vala',
   'Widgets/DockletViewModel.vala',
