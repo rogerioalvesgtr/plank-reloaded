@@ -56,6 +56,15 @@ namespace Plank {
     uint poll_timer_id = 0U;
     int64 away_since = 0;
 
+    // A click closes the popup before it reaches the popup's item, which
+    // then has to know that its own earlier click opened it, to leave it
+    // closed rather than open it again
+    const int64 CLICK_TOGGLE_TIME = 100 * 1000;
+    bool shown_by_click = false;
+    int64 shown_time = 0;
+    unowned ApplicationDockItem? closed_item = null;
+    int64 closed_time = 0;
+
     // The popup closed for an item without previews while the pointer stayed
     // on the dock, so the next item with previews follows as quickly as an
     // open popup would
@@ -194,6 +203,51 @@ namespace Plank {
     }
 
     /**
+     * Shows an item's window previews at once, as a click on it asks for
+     * when the dock is set to, whether previews on hover are on or not.
+     * A click on the item whose previews an earlier click opened leaves
+     * them closed instead, as the click itself already closed them.
+     *
+     * @param item the clicked item
+     * @return whether the click was taken, the previews now open or closed
+     */
+    internal bool toggle_for_click (ApplicationDockItem item) {
+      unowned DragManager drag_manager = controller.drag_manager;
+
+      if (drag_manager.InternalDragActive || drag_manager.ExternalDragActive
+          || controller.window.menu_is_visible ())
+        return false;
+
+      var closed_by_click = (item == closed_item && GLib.get_monotonic_time () - closed_time < CLICK_TOGGLE_TIME);
+      closed_item = null;
+
+      if (closed_by_click)
+        return true;
+
+      if (item.get_window_list ().is_empty)
+        return false;
+
+      stop_open_timer ();
+      show (item);
+      shown_by_click = is_open ();
+      shown_time = GLib.get_monotonic_time ();
+
+      return shown_by_click;
+    }
+
+    /**
+     * Hides the popup for a click on the dock, as dismiss () does, unless
+     * that very click just opened it: a button's release can arrive more
+     * than once.
+     */
+    internal void dismiss_for_click () {
+      if (shown_by_click && GLib.get_monotonic_time () - shown_time < CLICK_TOGGLE_TIME)
+        return;
+
+      dismiss ();
+    }
+
+    /**
      * Hides the popup and cancels a pending one, leaving the dock's hover to
      * the caller: a click, scroll, menu or drag on the dock, the dock hiding,
      * or a change of its hovered item.
@@ -206,6 +260,10 @@ namespace Plank {
         GLib.Source.remove (poll_timer_id);
         poll_timer_id = 0U;
       }
+
+      closed_item = (shown_by_click ? shown_item : null);
+      closed_time = GLib.get_monotonic_time ();
+      shown_by_click = false;
 
       shown_item = null;
       browsing = false;
@@ -240,6 +298,8 @@ namespace Plank {
     }
 
     void show (ApplicationDockItem item) {
+      shown_by_click = false;
+
       // The item may have left the dock while the popup waited
       if (!controller.VisibleItems.contains (item)) {
         close ();

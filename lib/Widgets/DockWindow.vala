@@ -186,7 +186,7 @@ namespace Plank {
 
       // Like the menu, window previews close on a click anywhere on the dock,
       // a long press included
-      controller.preview_manager.dismiss ();
+      controller.preview_manager.dismiss_for_click ();
 
       if (long_press_timer_id > 0U) {
         Source.remove (long_press_timer_id);

@@ -8,6 +8,13 @@
 		<value nick="dodge-active" value="5"/>
 	</enum>
 
+	<enum id="PlankWindowClickType">
+		<value nick="all" value="0"/>
+		<value nick="recent" value="1"/>
+		<value nick="cycle" value="2"/>
+		<value nick="previews" value="3"/>
+	</enum>
+
 	<enum id="PlankAreaType">
 		<value nick="auto" value="0"/>
 		<value nick="monitor" value="1"/>
@@ -80,6 +87,11 @@
 			<default>'intelligent'</default>
 			<summary>Hidemode of the dock</summary>
 			<description>Possible values are "none", "intelligent", "auto", "dodge-maximized", "window-dodge", and "dodge-active".</description>
+		</key>
+		<key name="window-click" enum='PlankWindowClickType'>
+			<default>'all'</default>
+			<summary>What a click on an item with several windows does</summary>
+			<description>Possible values are "all", which brings all of the windows to the front or minimizes them when they are, "recent", which focuses only the window in front last or minimizes it when it is active, "cycle", which focuses the window in front last and then the next one with each click, and "previews", which shows the windows' previews to choose from.</description>
 		</key>
 		<key name="icon-size" type="i">
 			<range min="16" max="128"/>

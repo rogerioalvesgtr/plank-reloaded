@@ -842,6 +842,81 @@ namespace Plank {
       return windows;
     }
 
+    /**
+     * Whether one of an application's windows is the active one.
+     *
+     * @param app the application
+     * @return whether the application is in front
+     */
+    public static bool has_active_window (Bamf.Application app) {
+      foreach (unowned Wnck.Window window in get_ordered_window_stack (app))
+        if (window.is_active ())
+          return true;
+
+      return false;
+    }
+
+    // The window minimize_active_window () minimized last, which the next
+    // click on its application brings back rather than another window
+    static ulong minimized_by_click = 0UL;
+
+    /**
+     * Minimizes the active window, if it is one of an application's.
+     *
+     * @param app the application
+     */
+    public static void minimize_active_window (Bamf.Application app) {
+      foreach (unowned Wnck.Window window in get_ordered_window_stack (app))
+        if (window.is_active ()) {
+          minimized_by_click = window.get_xid ();
+          window.minimize ();
+          return;
+        }
+    }
+
+    /**
+     * Focuses the window of an application that was in front last: the one
+     * a click just minimized, if it still is, else its topmost one that
+     * isn't minimized, else its topmost minimized one, leaving its other
+     * windows where they are.
+     *
+     * @param app the application
+     * @param event_time the time of the event asking for it
+     * @param workspace_only whether only windows on the active workspace count
+     * @param bring_to_current whether a window elsewhere moves to the active workspace
+     */
+    public static void focus_most_recent (Bamf.Application app, uint32 event_time, bool workspace_only,
+                                          bool bring_to_current = false) {
+      unowned Wnck.Workspace? active_workspace = get_wnck_screen ().get_active_workspace ();
+      unowned Wnck.Window? shown = null;
+      unowned Wnck.Window? minimized = null;
+
+      // The stack runs from the bottom to the top
+      foreach (unowned Wnck.Window window in get_ordered_window_stack (app)) {
+        if (window == null || window.is_skip_tasklist ())
+          continue;
+
+        if (workspace_only && active_workspace != null && !window_is_on_workspace (window, active_workspace))
+          continue;
+
+        if (window.is_minimized () && window.get_xid () == minimized_by_click) {
+          shown = window;
+          break;
+        }
+
+        if (window.is_minimized ())
+          minimized = window;
+        else
+          shown = window;
+      }
+
+      minimized_by_click = 0UL;
+
+      unowned Wnck.Window? target = (shown != null ? shown : minimized);
+      if (target != null)
+        center_and_focus_window (target, event_time, bring_to_current);
+    }
+
     public static void smart_focus (Bamf.Application app, uint32 event_time, bool bring_to_current = false) {
       var windows = get_ordered_window_stack (app);
 

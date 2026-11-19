@@ -19,6 +19,28 @@
 
 namespace Plank {
   /**
+   * What a click on an item with several windows does.
+   */
+  public enum WindowClickType {
+    /**
+     * Brings all of them to the front, or minimizes them when they are.
+     */
+    ALL,
+    /**
+     * Focuses only the one in front last, or minimizes it when it is active.
+     */
+    RECENT,
+    /**
+     * Focuses the one in front last, then the next one with each click.
+     */
+    CYCLE,
+    /**
+     * Shows their previews to choose from.
+     */
+    PREVIEWS
+  }
+
+  /**
    * Contains all preferences for docks.
    */
   public class DockPreferences : Plank.Settings {
@@ -44,6 +66,9 @@ namespace Plank {
 
     [Description (nick = "bring-to-current-workspace", blurb = "Whether to bring windows to the current workspace when activated instead of switching to the window's workspace.")]
     public bool BringToCurrentWorkspace { get; set; }
+
+    [Description (nick = "window-click", blurb = "What a click on an item with several windows does.  If 0, it brings all of them to the front, or minimizes them when they are.  If 1, it focuses only the one in front last, or minimizes it when it is active.  If 2, it focuses the one in front last, then the next one with each click.  If 3, it shows their previews to choose from.")]
+    public WindowClickType WindowClick { get; set; }
 
     [Description (nick = "icon-size", blurb = "The size of dock icons (in pixels).")]
     public int IconSize { get; set; }

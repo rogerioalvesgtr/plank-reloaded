@@ -106,6 +106,9 @@ namespace Plank {
     unowned Gtk.Switch sw_bring_to_workspace;
 
     [GtkChild]
+    unowned Gtk.ComboBoxText cb_window_click;
+
+    [GtkChild]
     unowned Gtk.IconView view_docklets;
 
     public PreferencesWindow (DockController controller) {
@@ -148,6 +151,9 @@ namespace Plank {
         break;
       case "CurrentWorkspaceOnly":
         sw_workspace_only.set_active (prefs.CurrentWorkspaceOnly);
+        break;
+      case "WindowClick":
+        cb_window_click.active_id = ((int) prefs.WindowClick).to_string ();
         break;
       case "BringToCurrentWorkspace":
         sw_bring_to_workspace.set_active (prefs.BringToCurrentWorkspace);
@@ -310,6 +316,10 @@ namespace Plank {
       prefs.BringToCurrentWorkspace = ((Gtk.Switch) widget).get_active ();
     }
 
+    void window_click_changed (Gtk.ComboBox widget) {
+      prefs.WindowClick = (WindowClickType) int.parse (widget.get_active_id ());
+    }
+
     void show_unpinned_toggled (GLib.Object widget, ParamSpec param) {
       prefs.PinnedOnly = !((Gtk.Switch) widget).get_active ();
     }
@@ -466,6 +476,7 @@ namespace Plank {
       adj_active_display_polling_interval.value_changed.connect (active_display_polling_interval_changed);
       sw_workspace_only.notify["active"].connect (workspace_only_toggled);
       sw_bring_to_workspace.notify["active"].connect (bring_to_workspace_toggled);
+      cb_window_click.changed.connect (window_click_changed);
       sw_show_unpinned.notify["active"].connect (show_unpinned_toggled);
       sw_lock_items.notify["active"].connect (lock_items_toggled);
       sw_tooltips_enabled.notify["active"].connect (tooltips_enabled_toggled);
@@ -503,6 +514,7 @@ namespace Plank {
       adj_active_display_polling_interval.value_changed.disconnect (active_display_polling_interval_changed);
       sw_workspace_only.notify["active"].disconnect (workspace_only_toggled);
       sw_bring_to_workspace.notify["active"].disconnect (bring_to_workspace_toggled);
+      cb_window_click.changed.disconnect (window_click_changed);
       sw_show_unpinned.notify["active"].disconnect (show_unpinned_toggled);
       sw_lock_items.notify["active"].disconnect (lock_items_toggled);
       sw_tooltips_enabled.notify["active"].disconnect (tooltips_enabled_toggled);
@@ -561,6 +573,7 @@ namespace Plank {
       }
       sw_workspace_only.set_active (prefs.CurrentWorkspaceOnly);
       sw_bring_to_workspace.set_active (prefs.BringToCurrentWorkspace);
+      cb_window_click.active_id = ((int) prefs.WindowClick).to_string ();
       sw_show_unpinned.set_active (!prefs.PinnedOnly);
       sw_lock_items.set_active (prefs.LockItems);
       sw_tooltips_enabled.set_active (prefs.TooltipsEnabled);

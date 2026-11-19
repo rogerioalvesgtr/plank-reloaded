@@ -770,6 +770,26 @@ msgstr "_Sair"
 msgid "Preferences"
 msgstr "Preferências"
 
+#: data/ui/preferences.ui
+msgid "Click with Several Windows:"
+msgstr "Clique com várias janelas:"
+
+#: data/ui/preferences.ui
+msgid "Show all windows"
+msgstr "Mostrar todas as janelas"
+
+#: data/ui/preferences.ui
+msgid "Show the last window"
+msgstr "Mostrar a última janela"
+
+#: data/ui/preferences.ui
+msgid "Cycle through windows"
+msgstr "Alternar entre as janelas"
+
+#: data/ui/preferences.ui
+msgid "Show window previews"
+msgstr "Mostrar as miniaturas"
+
 #~ msgid "dock"
 #~ msgstr "dock"
 

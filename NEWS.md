@@ -2,6 +2,11 @@
 
 **Note:** There is no stability of ABI/API until further notice!
 
+## Unreleased
+
+- Add a Click with Several Windows setting for what a click on an item with more than one window does: show all of them, as before, show only the one in front last and minimize it on the next click, cycle through them, or show their previews to choose from, whether previews on hover are on or not
+- Keep window previews a click opened from closing again when the button's release arrives twice
+
 ## 0.11.178 "Reloaded" (2026-10-17)
 
 - Fix the FreeBSD build, broken since 0.11.176: GLib now restores the default action for SIGINT and SIGTERM itself, instead of a call that needed glibc's sighandler_t (thanks VVD)

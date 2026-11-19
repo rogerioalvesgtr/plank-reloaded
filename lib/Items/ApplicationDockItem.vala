@@ -561,11 +561,55 @@ namespace Plank {
       }
 
       if (button == PopupButton.LEFT && App != null && Helpers.window_count (App, default_provider) > 0) {
+        // With several windows, the click does what the dock is set to
+        if (Helpers.window_count (App, default_provider) > 1 && click_on_windows (default_provider, event_time))
+          return AnimationType.DARKEN;
+
         WindowControl.smart_focus (App, event_time, Helpers.bring_to_current_workspace (default_provider));
         return AnimationType.DARKEN;
       }
 
       return AnimationType.NONE;
+    }
+
+    /**
+     * Acts on a click on the item while it has several windows, unless the
+     * dock is set to bring them all to the front.
+     *
+     * @param provider the dock's provider
+     * @param event_time the time of the click
+     * @return whether the click was acted on
+     */
+    bool click_on_windows (DefaultApplicationDockItemProvider? provider, uint32 event_time) {
+      if (provider == null)
+        return false;
+
+      var workspace_only = Helpers.current_workspace_only (provider);
+      var bring_to_current = Helpers.bring_to_current_workspace (provider);
+
+      switch (provider.Prefs.WindowClick) {
+      default:
+      case WindowClickType.ALL:
+        return false;
+
+      case WindowClickType.RECENT:
+        if (WindowControl.has_active_window (App))
+          WindowControl.minimize_active_window (App);
+        else
+          WindowControl.focus_most_recent (App, event_time, workspace_only, bring_to_current);
+        return true;
+
+      case WindowClickType.CYCLE:
+        if (WindowControl.has_active_window (App))
+          WindowControl.focus_next (App, event_time, workspace_only);
+        else
+          WindowControl.focus_most_recent (App, event_time, workspace_only, bring_to_current);
+        return true;
+
+      case WindowClickType.PREVIEWS:
+        unowned DockController? controller = get_dock ();
+        return (controller != null && controller.preview_manager.toggle_for_click (this));
+      }
     }
 
     /**
