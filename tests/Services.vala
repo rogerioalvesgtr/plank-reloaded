@@ -142,6 +142,10 @@ namespace PlankTests {
     Test.add_func ("/Services/DBusNames/application_id", dbus_names_application_id);
     Test.add_func ("/Services/DBusNames/object_path", dbus_names_object_path);
     Test.add_func ("/Services/AppImage/header", appimage_header);
+    Test.add_func ("/Services/Stack/shows_fan", stack_shows_fan_cases);
+    Test.add_func ("/Services/Stack/grid", stack_grid);
+    Test.add_func ("/Services/Stack/grid_room", stack_grid_room);
+    Test.add_func ("/Services/Stack/terminals", stack_terminals);
   }
 
   void matcher_desktop_file_for_window_class () {
@@ -2429,5 +2433,108 @@ namespace PlankTests {
 
     // A file too short to hold the type isn't one either
     assert (!is_appimage_header (type2[0:10]));
+  }
+
+  void stack_shows_fan_cases () {
+    // Left to choose, a fan is taken on a bottom dock for the directories
+    // it holds whole
+    assert (stack_shows_fan (false, Gtk.PositionType.BOTTOM, 1));
+    assert (stack_shows_fan (false, Gtk.PositionType.BOTTOM, STACK_FAN_MAX_ENTRIES));
+    assert (!stack_shows_fan (false, Gtk.PositionType.BOTTOM, STACK_FAN_MAX_ENTRIES + 1));
+
+    // An asked for fan is kept however many entries there are
+    assert (stack_shows_fan (true, Gtk.PositionType.BOTTOM, 500));
+
+    // A fan only rises from the bottom, asked for or not
+    assert (!stack_shows_fan (true, Gtk.PositionType.TOP, 3));
+    assert (!stack_shows_fan (true, Gtk.PositionType.LEFT, 3));
+    assert (!stack_shows_fan (false, Gtk.PositionType.RIGHT, 3));
+  }
+
+  void stack_grid () {
+    int columns, rows, visible_rows;
+
+    // Fewer tiles than fit make a single row
+    compute_stack_grid (out columns, out rows, out visible_rows, 4, 100, 90, 4, 2000, 2000);
+    assert (columns == 4);
+    assert (rows == 1);
+    assert (visible_rows == 1);
+
+    // A full row
+    compute_stack_grid (out columns, out rows, out visible_rows, STACK_GRID_MAX_COLUMNS, 100, 90, 4, 2000, 2000);
+    assert (columns == STACK_GRID_MAX_COLUMNS);
+    assert (rows == 1);
+
+    // One more evens out over two rows, 4 and 3, rather than 6 and 1
+    compute_stack_grid (out columns, out rows, out visible_rows, 7, 100, 90, 4, 2000, 2000);
+    assert (columns == 4);
+    assert (rows == 2);
+    assert (visible_rows == 2);
+
+    // Many tiles fill the columns, and the rows past the most shown scroll
+    compute_stack_grid (out columns, out rows, out visible_rows, 100, 100, 90, 4, 2000, 2000);
+    assert (columns == STACK_GRID_MAX_COLUMNS);
+    assert (rows == 17);
+    assert (visible_rows == STACK_GRID_MAX_ROWS);
+
+    // Every tile has its place
+    for (var tiles = 1; tiles <= 200; tiles++) {
+      compute_stack_grid (out columns, out rows, out visible_rows, tiles, 100, 90, 4, 2000, 2000);
+      assert (columns * rows >= tiles);
+      assert (columns * (rows - 1) < tiles);
+      assert (visible_rows >= 1 && visible_rows <= rows);
+    }
+  }
+
+  void stack_grid_room () {
+    int columns, rows, visible_rows;
+
+    // Three tiles of 100 with two spaces of 4 need 308 across
+    compute_stack_grid (out columns, out rows, out visible_rows, 30, 100, 90, 4, 308, 2000);
+    assert (columns == 3);
+    assert (rows == 10);
+    compute_stack_grid (out columns, out rows, out visible_rows, 30, 100, 90, 4, 307, 2000);
+    assert (columns == 2);
+    assert (rows == 15);
+
+    // Two rows of 90 with a space of 4 need 184 down
+    compute_stack_grid (out columns, out rows, out visible_rows, 30, 100, 90, 4, 2000, 184);
+    assert (visible_rows == 2);
+    compute_stack_grid (out columns, out rows, out visible_rows, 30, 100, 90, 4, 2000, 183);
+    assert (visible_rows == 1);
+
+    // Without room, or with none to tell, there is still a column and a row
+    compute_stack_grid (out columns, out rows, out visible_rows, 5, 100, 90, 4, 10, 10);
+    assert (columns == 1);
+    assert (rows == 5);
+    assert (visible_rows == 1);
+    compute_stack_grid (out columns, out rows, out visible_rows, 5, 100, 90, 4, -50, -50);
+    assert (columns == 1);
+    assert (visible_rows == 1);
+
+    // No tiles count as one, the tile saying the directory is empty
+    compute_stack_grid (out columns, out rows, out visible_rows, 0, 100, 90, 4, 2000, 2000);
+    assert (columns == 1);
+    assert (rows == 1);
+    assert (visible_rows == 1);
+  }
+
+  void stack_terminals () {
+    // The desktop's terminals come first, in their order, then the known ones
+    var candidates = terminal_candidates ({ "my-terminal --flag", " tilix " });
+    assert (candidates[0] == "my-terminal --flag");
+    assert (candidates[1] == "tilix");
+    assert (candidates.contains ("x-terminal-emulator"));
+    assert (candidates.contains ("xterm"));
+
+    // None is tried twice
+    var seen = new Gee.HashSet<string> ();
+    foreach (var candidate in candidates)
+      assert (seen.add (candidate));
+
+    // Empty settings are skipped
+    candidates = terminal_candidates ({ "", "  " });
+    assert (candidates[0] == "xdg-terminal-exec");
+    assert (candidates.size == terminal_candidates (new string[0]).size);
   }
 }

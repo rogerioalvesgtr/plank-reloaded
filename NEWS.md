@@ -2,6 +2,15 @@
 
 **Note:** There is no stability of ABI/API until further notice!
 
+## Unreleased
+
+- Show a folder's contents on a click, macOS-style: as a fan rising from a bottom dock when the folder has few entries, else as a grid, with a new "View Content As" choice of Automatic, Fan, Grid, List or Folder in the item's View Options; folders set to the Tile style, whose click showed the list, now follow that choice too
+- Browse subfolders inside the grid, with a way back, the arrow keys, Enter, Backspace and Escape, and a right-click menu on each entry to open it, pick the application to open it with, open a terminal in it or copy its path
+- Put a folder's own menu entries (Open in File Browser, View Options, Keep in Dock) above its contents, in its submenus too, where they stay in reach however many files it holds
+- Add Open in Terminal to folders and their subfolders, using the desktop's configured terminal, and Open With to files on the dock
+- Sort names like file managers do, with "file 2" before "file 10"
+- Add tests for the stack's fan and grid choices, grid shapes and terminal candidates
+
 ## 0.11.178 "Reloaded" (2026-10-17)
 
 - Fix the FreeBSD build, broken since 0.11.176: GLib now restores the default action for SIGINT and SIGTERM itself, instead of a call that needed glibc's sighandler_t (thanks VVD)

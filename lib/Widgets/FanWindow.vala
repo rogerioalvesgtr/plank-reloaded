@@ -19,23 +19,10 @@
 
 namespace Plank {
   /**
-   * One entry of a {@link FanWindow}.
-   */
-  public class FanEntry : GLib.Object {
-    public string text { get; construct; }
-    public string icon { get; construct; }
-    public File file { get; construct; }
-
-    public FanEntry (string text, string icon, File file) {
-      GLib.Object (text: text, icon: icon, file: file);
-    }
-  }
-
-  /**
    * A popup that fans a folder's entries out of a dock item, in an arc
    * rising from a dock at the bottom of the screen.
    */
-  public class FanWindow : Gtk.Window {
+  internal class FanWindow : Gtk.Window {
     const int ICON_SIZE = 56;
     const int GAP = 12;
     const int LABEL_WIDTH = 280;
@@ -47,9 +34,9 @@ namespace Plank {
     /**
      * Emitted when an entry was chosen.
      */
-    public signal void activated (FanEntry entry);
+    public signal void activated (StackEntry entry);
 
-    Gee.ArrayList<FanEntry> entries = new Gee.ArrayList<FanEntry> ();
+    Gee.ArrayList<StackEntry> entries = new Gee.ArrayList<StackEntry> ();
     Gee.ArrayList<Gdk.Pixbuf> pixbufs = new Gee.ArrayList<Gdk.Pixbuf> ();
     int hovered = -1;
     int fan_height = 0;
@@ -75,13 +62,36 @@ namespace Plank {
     }
 
     /**
+     * Whether a fan of some entries has the room it needs: to the left of
+     * the point it fans out of for its labels, and above it.
+     *
+     * @param count how many entries there are
+     * @param x the x position to fan out of
+     * @param y the y position to fan out of
+     * @param area the dock's area, the monitor or its work area
+     * @return whether the fan fits
+     */
+    public static bool fits (int count, int x, int y, Gdk.Rectangle area) {
+      var max_dx = (int) (CURVE * (count - 1) * (count - 1));
+
+      return (x - LABEL_WIDTH - ICON_SIZE / 2 >= area.x
+              && x + ICON_SIZE / 2 + max_dx + ICON_SIZE <= area.x + area.width
+              && y - (count * (ICON_SIZE + GAP) + 2 * PADDING + tilt_rise (count)) >= area.y);
+    }
+
+    // How far the last entry's label rises above its icon's row as it tilts
+    static int tilt_rise (int count) {
+      return (int) Math.ceil ((LABEL_WIDTH + ICON_SIZE / 2.0) * Math.sin (TILT * (count - 1)));
+    }
+
+    /**
      * Fans the entries out of a point.
      *
      * @param list the entries, the first one nearest to the dock
      * @param x the x position to fan out of, the dock item's center
      * @param y the y position to fan out of, the dock item's top
      */
-    public void show_fan (Gee.List<FanEntry> list, int x, int y) {
+    public void show_fan (Gee.List<StackEntry> list, int x, int y) {
       close_fan ();
 
       entries.clear ();
@@ -97,7 +107,9 @@ namespace Plank {
 
       var max_dx = (int) (CURVE * (n - 1) * (n - 1));
       var width = LABEL_WIDTH + ICON_SIZE + max_dx + ICON_SIZE;
-      fan_height = n * (ICON_SIZE + GAP) + 2 * PADDING;
+      // The labels tilt with their entries, the last one's the most, which
+      // lifts its far end
+      fan_height = n * (ICON_SIZE + GAP) + 2 * PADDING + tilt_rise (n);
 
       set_size_request (width, fan_height);
       resize (width, fan_height);
@@ -107,8 +119,7 @@ namespace Plank {
       progress = 0.0;
       show ();
 
-      unowned Gdk.Seat seat = get_display ().get_default_seat ();
-      seat.grab (get_window (), Gdk.SeatCapabilities.ALL, true, null, null, null);
+      grab_popup (this);
 
       start_time = get_frame_clock ().get_frame_time ();
       tick_id = add_tick_callback ((widget, clock) => {
@@ -137,7 +148,7 @@ namespace Plank {
       if (!visible)
         return;
 
-      get_display ().get_default_seat ().ungrab ();
+      ungrab_popup (this);
       hide ();
     }
 
@@ -158,8 +169,17 @@ namespace Plank {
       return -1;
     }
 
+    // With the pointer taken, events on the dock's window arrive here too,
+    // so positions are taken from the screen rather than the event's window
+    int get_entry_at_root (double x_root, double y_root) {
+      int x, y;
+      get_window ().get_origin (out x, out y);
+
+      return get_entry_at (x_root - x, y_root - y);
+    }
+
     public override bool motion_notify_event (Gdk.EventMotion event) {
-      var entry = get_entry_at (event.x, event.y);
+      var entry = get_entry_at_root (event.x_root, event.y_root);
       if (entry != hovered) {
         hovered = entry;
         queue_draw ();
@@ -173,7 +193,7 @@ namespace Plank {
     }
 
     public override bool button_release_event (Gdk.EventButton event) {
-      var entry = get_entry_at (event.x, event.y);
+      var entry = get_entry_at_root (event.x_root, event.y_root);
       close_fan ();
       if (entry >= 0)
         activated (entries[entry]);

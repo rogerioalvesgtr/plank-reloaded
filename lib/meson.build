@@ -56,6 +56,7 @@ plank_lib_sources = [
   'Widgets/PoofWindow.vala',
   'Widgets/PreferencesWindow.vala',
   'Widgets/PreviewWindow.vala',
+  'Widgets/StackWindow.vala',
   'Widgets/TitledSeparatorMenuItem.vala',
 ]
 
@@ -66,6 +67,7 @@ plank_internal_lib_sources = [
   'InternalGeometry.vala',
   'InternalPressure.vala',
   'InternalQuarks.vala',
+  'InternalStack.vala',
   'Services/Matcher.vala',
   'Services/WindowControl.vala',
   'Widgets/DockletViewModel.vala',

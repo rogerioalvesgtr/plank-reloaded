@@ -38,4 +38,5 @@ lib/Items/FileDockItem.vala
 lib/Items/PlaceholderDockItem.vala
 lib/Items/PlankDockItem.vala
 lib/Widgets/PreferencesWindow.vala
+lib/Widgets/StackWindow.vala
 src/Main.vala
