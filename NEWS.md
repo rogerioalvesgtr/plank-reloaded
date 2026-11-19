@@ -2,6 +2,12 @@
 
 **Note:** There is no stability of ABI/API until further notice!
 
+## Unreleased
+
+- Add a per-dock Restrict to Monitor setting that limits a dock to the windows on its own monitor, judged by each window's center: unpinned items show only with a window there, and the indicator, previews, window list, click, scroll and Close act only on those windows (thanks cdmdotnet)
+- Add `plank --monitor-manager`, which runs a dock on each connected monitor, gives each monitor the dock it had before by its EDID, else by its position in the layout, adds and removes docks as monitors come and go, and starts a crashed dock again (thanks cdmdotnet)
+- Add tests for windows on monitors, EDID identities and the monitor manager's choice of docks
+
 ## 0.11.178 "Reloaded" (2026-10-17)
 
 - Fix the FreeBSD build, broken since 0.11.176: GLib now restores the default action for SIGINT and SIGTERM itself, instead of a call that needed glibc's sighandler_t (thanks VVD)

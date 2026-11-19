@@ -770,6 +770,15 @@ msgstr "_Sair"
 msgid "Preferences"
 msgstr "Preferências"
 
+#: data/ui/preferences.ui
+msgid "Restrict to Monitor:"
+msgstr "Restringir ao Monitor:"
+
+#: lib/Widgets/PreferencesWindow.vala
+#, c-format
+msgid "Assigned to %s by the monitor manager"
+msgstr "Atribuído a %s pelo gerenciador de monitores"
+
 #~ msgid "dock"
 #~ msgstr "dock"
 
