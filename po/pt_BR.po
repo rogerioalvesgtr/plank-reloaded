@@ -770,6 +770,38 @@ msgstr "_Sair"
 msgid "Preferences"
 msgstr "Preferências"
 
+#: lib/Items/ApplicationDockItem.vala
+msgid "_Restore"
+msgstr "_Restaurar"
+
+#: lib/Items/ApplicationDockItem.vala
+msgid "Mi_nimize"
+msgstr "Mi_nimizar"
+
+#: lib/Items/ApplicationDockItem.vala
+msgid "Unma_ximize"
+msgstr "Desfazer ma_ximização"
+
+#: lib/Items/ApplicationDockItem.vala
+msgid "Ma_ximize"
+msgstr "Ma_ximizar"
+
+#: lib/Items/ApplicationDockItem.vala
+msgid "_New Window"
+msgstr "_Nova janela"
+
+#: lib/Items/ApplicationDockItem.vala
+msgid "_Recent Files"
+msgstr "Arquivos _recentes"
+
+#: lib/Items/ApplicationDockItem.vala
+msgid "_Places"
+msgstr "_Locais"
+
+#: lib/Items/ApplicationDockItem.vala
+msgid "Home"
+msgstr "Pasta pessoal"
+
 #~ msgid "dock"
 #~ msgstr "dock"
 

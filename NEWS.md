@@ -2,6 +2,13 @@
 
 **Note:** There is no stability of ABI/API until further notice!
 
+## Unreleased
+
+- List the files an application opened recently in its menu, under Recent Files: those the recent files list records as opened by it and those of the types it is the default application for, newest first, each opening in that application
+- List the home folder and the folders bookmarked in the file manager under Places in the file manager's menu
+- Add Minimize or Restore, Maximize or Unmaximize and, for applications without such an action of their own, New Window to a running application's menu
+- Add tests for telling applications by their command lines and for reading bookmarks
+
 ## 0.11.178 "Reloaded" (2026-10-17)
 
 - Fix the FreeBSD build, broken since 0.11.176: GLib now restores the default action for SIGINT and SIGTERM itself, instead of a call that needed glibc's sighandler_t (thanks VVD)

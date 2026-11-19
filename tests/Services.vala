@@ -142,6 +142,8 @@ namespace PlankTests {
     Test.add_func ("/Services/DBusNames/application_id", dbus_names_application_id);
     Test.add_func ("/Services/DBusNames/object_path", dbus_names_object_path);
     Test.add_func ("/Services/AppImage/header", appimage_header);
+    Test.add_func ("/Services/QuickAccess/exec_program", quick_access_exec_program);
+    Test.add_func ("/Services/QuickAccess/bookmarks", quick_access_bookmarks);
   }
 
   void matcher_desktop_file_for_window_class () {
@@ -2429,5 +2431,66 @@ namespace PlankTests {
 
     // A file too short to hold the type isn't one either
     assert (!is_appimage_header (type2[0:10]));
+  }
+
+  void quick_access_exec_program () {
+    // The program's name, without its folders, arguments or field codes
+    assert (exec_program ("firefox %u") == "firefox");
+    assert (exec_program ("/usr/bin/gimp-2.10 %U") == "gimp-2.10");
+    assert (exec_program ("'/opt/My App/my app' --flag") == "my app");
+
+    // The same application whichever way its command line is written, as
+    // recent files record it quoted
+    assert (exec_program ("'gedit %u'") == exec_program ("gedit %U"));
+
+    // A leading env with its variables and options is skipped
+    assert (exec_program ("env GDK_BACKEND=x11 /usr/bin/code --unity-launch %F") == "code");
+    assert (exec_program ("/usr/bin/env -u FOO BAR=1 inkscape") == "inkscape");
+
+    // Flatpak and Snap command lines give the application they run
+    assert (exec_program ("/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=gimp --file-forwarding org.gimp.GIMP @@u %U @@") == "org.gimp.GIMP");
+    assert (exec_program ("flatpak run org.example.App") != exec_program ("flatpak run org.example.Other"));
+    assert (exec_program ("snap run spotify") == "spotify");
+    assert (exec_program ("flatpak") == "flatpak");
+
+    // No program at all
+    assert (exec_program ("") == null);
+    assert (exec_program ("env A=1") == null);
+    assert (exec_program ("'unbalanced") == null);
+  }
+
+  void quick_access_bookmarks () {
+    var places = parse_bookmarks ("file:///home/user/Documents\n"
+                                  + "file:///home/user/My%20Projects/\n"
+                                  + "sftp://server/srv/www Web Server\n"
+                                  + "\n"
+                                  + "not a bookmark\n"
+                                  + "file:///home/user/Documents Again\n"
+                                  + "file:/// \n");
+
+    assert (places.size == 4);
+
+    // Named by its folder, unescaped, a trailing slash aside
+    assert (places[0].uri == "file:///home/user/Documents");
+    assert (places[0].label == "Documents");
+    assert (places[1].uri == "file:///home/user/My%20Projects/");
+    assert (places[1].label == "My Projects");
+
+    // The name the user gave it, spaces and all
+    assert (places[2].uri == "sftp://server/srv/www");
+    assert (places[2].label == "Web Server");
+
+    // A folder without a name of its own is named by its whole location
+    assert (places[3].uri == "file:///");
+    assert (places[3].label != "");
+
+    // Nothing in, nothing out
+    assert (parse_bookmarks ("").size == 0);
+
+    // No more than a menu holds
+    var many = new StringBuilder ();
+    for (var i = 0; i < PLACES_MAX + 10; i++)
+      many.append_printf ("file:///folder%d\n", i);
+    assert (parse_bookmarks (many.str).size == PLACES_MAX);
   }
 }
