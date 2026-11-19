@@ -184,6 +184,11 @@
 			<summary>Window preview size</summary>
 			<description>The largest width of a window preview's thumbnail, in pixels.</description>
 		</key>
+		<key name="preview-peek" type="b">
+			<default>true</default>
+			<summary>Peek at a window when its preview is hovered</summary>
+			<description>If true, resting the pointer on a window's preview shows that window above the others, without focusing it, until the pointer moves on. Only a click brings the window to the front.</description>
+		</key>
 		<key name="previews-enabled" type="b">
 			<default>false</default>
 			<summary>Show window previews when items are hovered</summary>

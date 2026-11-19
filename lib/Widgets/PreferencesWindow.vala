@@ -94,6 +94,9 @@ namespace Plank {
     unowned Gtk.Switch sw_tooltips_enabled;
     [GtkChild]
     unowned Gtk.Switch sw_previews_enabled;
+
+    [GtkChild]
+    unowned Gtk.Switch sw_preview_peek;
     [GtkChild]
     unowned Gtk.Switch sw_anchor_docklets;
     [GtkChild]
@@ -183,6 +186,9 @@ namespace Plank {
         break;
       case "TooltipsEnabled":
         sw_tooltips_enabled.set_active (prefs.TooltipsEnabled);
+        break;
+      case "PreviewPeek":
+        sw_preview_peek.set_active (prefs.PreviewPeek);
         break;
       case "PreviewsEnabled":
         sw_previews_enabled.set_active (prefs.PreviewsEnabled);
@@ -341,6 +347,10 @@ namespace Plank {
 
     void tooltips_enabled_toggled (GLib.Object widget, ParamSpec param) {
       prefs.TooltipsEnabled = ((Gtk.Switch) widget).get_active ();
+    }
+
+    void preview_peek_toggled (GLib.Object widget, ParamSpec param) {
+      prefs.PreviewPeek = ((Gtk.Switch) widget).get_active ();
     }
 
     void previews_enabled_toggled (GLib.Object widget, ParamSpec param) {
@@ -507,6 +517,7 @@ namespace Plank {
       sw_lock_items.notify["active"].connect (lock_items_toggled);
       sw_tooltips_enabled.notify["active"].connect (tooltips_enabled_toggled);
       sw_previews_enabled.notify["active"].connect (previews_enabled_toggled);
+      sw_preview_peek.notify["active"].connect (preview_peek_toggled);
       adj_preview_delay.value_changed.connect (preview_delay_changed);
       adj_preview_size.value_changed.connect (preview_size_changed);
       sw_anchor_docklets.notify["active"].connect (anchor_docklets_toggled);
@@ -546,6 +557,7 @@ namespace Plank {
       sw_lock_items.notify["active"].disconnect (lock_items_toggled);
       sw_tooltips_enabled.notify["active"].disconnect (tooltips_enabled_toggled);
       sw_previews_enabled.notify["active"].disconnect (previews_enabled_toggled);
+      sw_preview_peek.notify["active"].disconnect (preview_peek_toggled);
       adj_preview_delay.value_changed.disconnect (preview_delay_changed);
       adj_preview_size.value_changed.disconnect (preview_size_changed);
       sw_anchor_docklets.notify["active"].disconnect (anchor_docklets_toggled);
@@ -606,6 +618,7 @@ namespace Plank {
       sw_lock_items.set_active (prefs.LockItems);
       sw_tooltips_enabled.set_active (prefs.TooltipsEnabled);
       sw_previews_enabled.set_active (prefs.PreviewsEnabled);
+      sw_preview_peek.set_active (prefs.PreviewPeek);
       adj_preview_delay.value = prefs.PreviewDelay;
       adj_preview_size.value = prefs.PreviewSize;
       sp_preview_delay.sensitive = prefs.PreviewsEnabled;

@@ -40,6 +40,16 @@ namespace Plank {
 
     PreviewWindow popup;
 
+    // How long the pointer rests on a window's preview before the window
+    // is peeked at, and how long a peek outlasts the pointer, so it
+    // carries over to the next preview
+    const uint PEEK_DELAY = 400U;
+    const uint PEEK_LINGER = 150U;
+
+    PeekWindow? peek = null;
+    ulong peeked_xid = 0UL;
+    uint peek_timer_id = 0U;
+
     /**
      * The item whose windows the popup shows, while it is open.
      */
@@ -89,6 +99,7 @@ namespace Plank {
       popup = new PreviewWindow ();
       popup.activated.connect (window_activated);
       popup.close_requested.connect (window_close_requested);
+      popup.tile_hovered.connect (tile_hovered);
 
       controller.prefs.notify["PreviewsEnabled"].connect (previews_enabled_changed);
       controller.hide_manager.notify["Hidden"].connect (hidden_changed);
@@ -260,6 +271,8 @@ namespace Plank {
         GLib.Source.remove (poll_timer_id);
         poll_timer_id = 0U;
       }
+
+      stop_peek ();
 
       closed_item = (shown_by_click ? shown_item : null);
       closed_time = GLib.get_monotonic_time ();
@@ -462,6 +475,96 @@ namespace Plank {
       }
 
       return null;
+    }
+
+    // Peeks at the window whose preview the pointer rests on: its picture
+    // shows where the window is, above the others, until the pointer moves
+    // on. Only a click brings the window itself to the front
+    void tile_hovered (ulong xid, bool hovered) {
+      if (peek_timer_id > 0U) {
+        GLib.Source.remove (peek_timer_id);
+        peek_timer_id = 0U;
+      }
+
+      if (!controller.prefs.PreviewPeek)
+        return;
+
+      if (!hovered) {
+        peek_timer_id = Gdk.threads_add_timeout_full (GLib.Priority.DEFAULT, PEEK_LINGER, () => {
+          peek_timer_id = 0U;
+          hide_peek ();
+          return false;
+        });
+        return;
+      }
+
+      if (xid == peeked_xid)
+        return;
+
+      // Once peeking, the next preview's window follows at once
+      var delay = (peeked_xid != 0UL ? 0U : PEEK_DELAY);
+      // The _full variant owns its closure, which holds the window's id
+      peek_timer_id = Gdk.threads_add_timeout_full (GLib.Priority.DEFAULT, delay, () => {
+        peek_timer_id = 0U;
+        show_peek (xid);
+        return false;
+      });
+    }
+
+    void show_peek (ulong xid) {
+      var window = find_window (xid);
+      unowned Wnck.Workspace? workspace = WindowControl.get_wnck_screen ().get_active_workspace ();
+
+      // Only windows on screen have contents to show, and only with
+      // compositing those of covered windows
+      if (window == null || !popup.get_screen ().is_composited () || !is_on_screen (window, workspace)) {
+        hide_peek ();
+        return;
+      }
+
+      unowned Wnck.Window? wnck_window = WindowControl.get_wnck_window (window.get_xid ());
+      var picture = WindowControl.get_window_thumbnail (window);
+      if (wnck_window == null || picture == null) {
+        hide_peek ();
+        return;
+      }
+
+      // The picture is of the window without its frame
+      int x, y, width, height;
+      wnck_window.get_client_window_geometry (out x, out y, out width, out height);
+
+      if (peek == null)
+        peek = new PeekWindow ();
+
+      unowned PositionManager position_manager = controller.position_manager;
+      var dock_region = position_manager.get_cursor_region ();
+      var window_region = position_manager.get_dock_window_region ();
+      dock_region.x += window_region.x;
+      dock_region.y += window_region.y;
+
+      var scale = peek.get_scale_factor ();
+      peek.show_picture (picture, x / scale, y / scale, dock_region);
+      peeked_xid = xid;
+
+      // The previews stay above what they peek at
+      unowned Gdk.Window? popup_window = popup.get_window ();
+      if (popup_window != null)
+        popup_window.raise ();
+    }
+
+    void hide_peek () {
+      peeked_xid = 0UL;
+      if (peek != null)
+        peek.clear ();
+    }
+
+    void stop_peek () {
+      if (peek_timer_id > 0U) {
+        GLib.Source.remove (peek_timer_id);
+        peek_timer_id = 0U;
+      }
+
+      hide_peek ();
     }
 
     void window_activated (ulong xid, uint32 event_time) {

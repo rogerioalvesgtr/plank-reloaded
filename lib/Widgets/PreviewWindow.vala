@@ -266,6 +266,15 @@ namespace Plank {
     public signal void close_requested (ulong xid, uint32 event_time);
 
     /**
+     * Emitted when the pointer comes to rest on a window's tile or moves
+     * on from it.
+     *
+     * @param xid the window's X id
+     * @param hovered whether the pointer is on the tile now
+     */
+    public signal void tile_hovered (ulong xid, bool hovered);
+
+    /**
      * The area the popup was last placed in, in logical pixels, as it was
      * computed rather than read back from the window.
      */
@@ -424,6 +433,14 @@ namespace Plank {
     PreviewTile create_tile (PreviewEntry entry, int thumbnail_width, int thumbnail_height) {
       var tile = new PreviewTile (entry, create_image (entry, thumbnail_width, thumbnail_height));
       tile.button_release_event.connect (tile_button_released);
+      tile.enter_notify_event.connect_after ((event) => {
+        tile_hovered (tile.xid, true);
+        return Gdk.EVENT_PROPAGATE;
+      });
+      tile.leave_notify_event.connect_after ((event) => {
+        tile_hovered (tile.xid, false);
+        return Gdk.EVENT_PROPAGATE;
+      });
 
       return tile;
     }

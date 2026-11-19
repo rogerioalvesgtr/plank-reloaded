@@ -53,6 +53,7 @@ plank_lib_sources = [
   'Widgets/DockWindow.vala',
   'Widgets/FanWindow.vala',
   'Widgets/HoverWindow.vala',
+  'Widgets/PeekWindow.vala',
   'Widgets/PoofWindow.vala',
   'Widgets/PreferencesWindow.vala',
   'Widgets/PreviewWindow.vala',

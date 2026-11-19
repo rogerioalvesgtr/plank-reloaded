@@ -151,6 +151,9 @@ namespace Plank {
     [Description (nick = "previews-enabled", blurb = "Whether to show previews of an application's windows instead of a tooltip when its item is hovered.")]
     public bool PreviewsEnabled { get; set; }
 
+    [Description (nick = "preview-peek", blurb = "Whether resting the pointer on a window's preview shows the window above the others until the pointer moves on.")]
+    public bool PreviewPeek { get; set; }
+
     [Description (nick = "preview-delay", blurb = "Time (in ms) to wait before showing window previews.")]
     public uint PreviewDelay { get; set; }
 

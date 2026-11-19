@@ -995,6 +995,38 @@ along with plank.  If not, see <http://www.gnu.org/licenses/>.
                 <property name="width">2</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkLabel" id="l_preview_peek">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="halign">end</property>
+                <property
+                  name="label"
+                  translatable="yes"
+                >Peek at Windows:</property>
+                <property name="justify">right</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">12</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSwitch" id="sw_preview_peek">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="halign">start</property>
+                <property name="valign">center</property>
+                <property
+                  name="tooltip_text"
+                  translatable="yes"
+                >Show a window above the others while the pointer rests on its preview</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">12</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="name">grid_behaviour</property>

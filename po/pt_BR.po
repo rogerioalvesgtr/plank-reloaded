@@ -881,6 +881,14 @@ msgstr "Alternar entre as janelas"
 msgid "Show window previews"
 msgstr "Mostrar as miniaturas"
 
+#: data/ui/preferences.ui
+msgid "Peek at Windows:"
+msgstr "Espiar janelas:"
+
+#: data/ui/preferences.ui
+msgid "Show a window above the others while the pointer rests on its preview"
+msgstr "Mostra a janela acima das outras enquanto o ponteiro repousa sobre a miniatura dela"
+
 #~ msgid "dock"
 #~ msgstr "dock"
 
