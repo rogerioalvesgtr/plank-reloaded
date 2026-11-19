@@ -13,6 +13,10 @@
 - Add Open in Terminal to folders and their subfolders, using the desktop's configured terminal, and Open With to files on the dock
 - Sort names like file managers do, with "file 2" before "file 10"
 - Add tests for the stack's fan and grid choices, grid shapes and terminal candidates
+- List the files an application opened recently in its menu, under Recent Files: those the recent files list records as opened by it and those of the types it is the default application for, newest first, each opening in that application
+- List the home folder and the folders bookmarked in the file manager under Places in the file manager's menu
+- Add Minimize or Restore, Maximize or Unmaximize and, for applications without such an action of their own, New Window to a running application's menu
+- Add tests for telling applications by their command lines and for reading bookmarks
 
 ## 0.11.178 "Reloaded" (2026-10-17)
 

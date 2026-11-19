@@ -69,6 +69,7 @@ plank_internal_lib_sources = [
   'InternalPressure.vala',
   'InternalQuarks.vala',
   'InternalStack.vala',
+  'InternalQuickAccess.vala',
   'Services/Matcher.vala',
   'Services/WindowControl.vala',
   'Widgets/DockletViewModel.vala',

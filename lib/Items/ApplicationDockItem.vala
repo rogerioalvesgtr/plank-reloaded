@@ -713,6 +713,25 @@ namespace Plank {
           item.activate.connect (() => WindowControl.close_all (App, event_time, monitor));
         }
         items.add (item);
+
+        // What the other docks and panels offer for an application's windows
+        if (WindowControl.has_minimized_window (App)) {
+          item = create_menu_item (_("_Restore"), "view-restore-symbolic;;view-restore");
+          item.activate.connect (() => WindowControl.restore (App, event_time));
+        } else {
+          item = create_menu_item (_("Mi_nimize"), "window-minimize-symbolic;;window-minimize");
+          item.activate.connect (() => WindowControl.minimize (App));
+        }
+        items.add (item);
+
+        if (WindowControl.has_maximized_window (App)) {
+          item = create_menu_item (_("Unma_ximize"), "window-restore-symbolic;;view-restore");
+          item.activate.connect (() => WindowControl.unmaximize (App));
+        } else {
+          item = create_menu_item (_("Ma_ximize"), "window-maximize-symbolic;;view-fullscreen");
+          item.activate.connect (() => WindowControl.maximize (App));
+        }
+        items.add (item);
       }
 
 #if HAVE_DBUSMENU
@@ -739,6 +758,30 @@ namespace Plank {
           var item = create_menu_item (s, values[1], true);
           item.activate.connect (() => launch_action (values[0], values[2]));
           items.add (item);
+        }
+      }
+
+      // A running application's icon focuses its windows, so opening
+      // another one gets an entry, unless the application has its own
+      if (!is_window () && is_running () && window_count > 0 && !has_new_window_action ()) {
+        if (items.size > 0 && actions.size == 0)
+          items.add (new Gtk.SeparatorMenuItem ());
+
+        var item = create_menu_item (_("_New Window"), "window-new-symbolic;;window-new", true);
+        item.activate.connect (() => {
+          launch ();
+          ClickedAnimation = AnimationType.BOUNCE;
+          LastClicked = GLib.get_monotonic_time ();
+        });
+        items.add (item);
+      }
+
+      if (!is_window ()) {
+        var quick_access = get_quick_access_items ();
+        if (quick_access.size > 0) {
+          if (items.size > 0)
+            items.add (new Gtk.SeparatorMenuItem ());
+          items.add_all (quick_access);
         }
       }
 
@@ -831,6 +874,196 @@ namespace Plank {
      */
     public override string get_drop_text () {
       return _("Drop to open with %s").printf (Text);
+    }
+
+    // Whether one of the launcher's own actions opens a new window, as
+    // "new-window" or "NewWindow" do
+    bool has_new_window_action () {
+      foreach (var name in actions) {
+        var values = actions_map.get (name).split (";;");
+        var id = (values.length > 2 ? values[2] : "").down ();
+
+        if (id.contains ("new") && id.contains ("window"))
+          return true;
+      }
+
+      return false;
+    }
+
+    /**
+     * The entries that reach into the application: the files it opened
+     * recently and, for the file manager, the folders the user bookmarked.
+     *
+     * @return the entries, each a submenu, or none
+     */
+    Gee.ArrayList<Gtk.MenuItem> get_quick_access_items () {
+      var items = new Gee.ArrayList<Gtk.MenuItem> ();
+
+      DesktopAppInfo? info = null;
+      try {
+        info = new DesktopAppInfo.from_filename (Filename.from_uri (Prefs.Launcher));
+      } catch (ConvertError e) {
+        return items;
+      }
+
+      if (info == null)
+        return items;
+
+      var recent = get_recent_files (info);
+      if (recent.size > 0) {
+        var submenu = new Gtk.Menu ();
+
+        foreach (var recent_info in recent) {
+          var file = File.new_for_uri (recent_info.get_uri ());
+          var name = Helpers.truncate_middle (recent_info.get_display_name (), MAX_WINDOW_NAME_LENGTH);
+          var icon = DrawingService.get_icon_from_file (file) ?? "text-x-generic";
+
+          var item = create_literal_menu_item (name, icon, true);
+          item.tooltip_text = recent_info.get_uri_display ();
+          item.activate.connect (() => open_with_launcher (file));
+          submenu.append (item);
+        }
+
+        submenu.show_all ();
+
+        var item = create_menu_item (_("_Recent Files"), "document-open-recent-symbolic;;document-open-recent", true);
+        item.set_submenu (submenu);
+        items.add (item);
+      }
+
+      var places = get_places (info);
+      if (places.size > 0) {
+        var submenu = new Gtk.Menu ();
+
+        foreach (var place in places) {
+          var file = File.new_for_uri (place.uri);
+          var name = Helpers.truncate_middle (place.label, MAX_WINDOW_NAME_LENGTH);
+          var icon = (file.is_native () ? DrawingService.get_icon_from_file (file) : null) ?? "folder";
+
+          var item = create_literal_menu_item (name, icon, true);
+          item.activate.connect (() => open_with_launcher (file));
+          submenu.append (item);
+        }
+
+        submenu.show_all ();
+
+        var item = create_menu_item (_("_Places"), "user-bookmarks-symbolic;;user-bookmarks;;folder", true);
+        item.set_submenu (submenu);
+        items.add (item);
+      }
+
+      return items;
+    }
+
+    void open_with_launcher (File file) {
+      System.get_default ().launch_with_files (File.new_for_uri (Prefs.Launcher), { file });
+
+      ClickedAnimation = AnimationType.BOUNCE;
+      LastClicked = GLib.get_monotonic_time ();
+    }
+
+    /**
+     * The files the application opened last, newest first: those the
+     * recent files list records as opened by it, and those of the types it
+     * is the default application for. Files that are gone are left out.
+     *
+     * @param info the launcher's application
+     * @return the files, no more than RECENT_FILES_MAX
+     */
+    Gee.ArrayList<Gtk.RecentInfo> get_recent_files (DesktopAppInfo info) {
+      var files = new Gee.ArrayList<Gtk.RecentInfo> ();
+
+      var id = info.get_id ();
+      var commandline = info.get_commandline ();
+      var program = (commandline != null ? exec_program (commandline) : null);
+
+      // Whether the application is the default one for a type, looked up
+      // once for each type
+      var is_default = new Gee.HashMap<string, bool> ();
+
+      var recent = Gtk.RecentManager.get_default ().get_items ();
+      recent.sort ((a, b) => {
+        var time_a = (int64) a.get_modified ();
+        var time_b = (int64) b.get_modified ();
+        return (time_a == time_b ? 0 : (time_b > time_a ? 1 : -1));
+      });
+
+      foreach (var recent_info in recent) {
+        var mime_type = recent_info.get_mime_type ();
+
+        // Folders are the file manager's places
+        if (mime_type == null || mime_type == "inode/directory")
+          continue;
+
+        var matches = false;
+
+        if (program != null) {
+          foreach (unowned string name in recent_info.get_applications ()) {
+            unowned string app_exec;
+            uint count;
+            time_t time;
+            if (recent_info.get_application_info (name, out app_exec, out count, out time)
+                && app_exec != null && exec_program (app_exec) == program) {
+              matches = true;
+              break;
+            }
+          }
+        }
+
+        if (!matches && id != null) {
+          if (!is_default.has_key (mime_type)) {
+            var default_info = AppInfo.get_default_for_type (mime_type, false);
+            is_default[mime_type] = (default_info != null && default_info.get_id () == id);
+          }
+
+          matches = is_default[mime_type];
+        }
+
+        if (!matches || !recent_info.exists ())
+          continue;
+
+        files.add (recent_info);
+        if (files.size >= RECENT_FILES_MAX)
+          break;
+      }
+
+      return files;
+    }
+
+    /**
+     * The folders the user bookmarked in the file manager, after the home
+     * folder, for the application that opens folders by default.
+     *
+     * @param info the launcher's application
+     * @return the places, none for other applications
+     */
+    Gee.ArrayList<Place> get_places (DesktopAppInfo info) {
+      var places = new Gee.ArrayList<Place> ();
+
+      var id = info.get_id ();
+      var file_manager = AppInfo.get_default_for_type ("inode/directory", false);
+      if (id == null || file_manager == null || file_manager.get_id () != id)
+        return places;
+
+      var home = File.new_for_path (Environment.get_home_dir ());
+      places.add (new Place (home.get_uri (), _("Home")));
+
+      var bookmarks = File.new_for_path (Environment.get_user_config_dir ()).get_child ("gtk-3.0").get_child ("bookmarks");
+      try {
+        uint8[] contents;
+        bookmarks.load_contents (null, out contents, null);
+
+        foreach (var place in parse_bookmarks ((string) contents)) {
+          // Local folders that are gone are left out, others can't be told
+          var file = File.new_for_uri (place.uri);
+          if (place.uri != home.get_uri () && (!file.is_native () || file.query_exists ()))
+            places.add (place);
+        }
+      } catch (Error e) {
+        // No bookmarks
+      }
+
+      return places;
     }
 
     /**
