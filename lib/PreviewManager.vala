@@ -326,8 +326,10 @@ namespace Plank {
         return;
       }
 
-      // A popup moving to another item leaves its captures behind
+      // A popup moving to another item leaves its captures behind, and its
+      // peek, as its tiles go without the pointer leaving them
       stop_captures ();
+      stop_peek ();
 
       unowned PositionManager position_manager = controller.position_manager;
       var monitor = position_manager.get_raw_monitor_geometry ();
@@ -382,7 +384,7 @@ namespace Plank {
         var xid = window.get_xid ();
 
         // A window's last thumbnail shows until it is captured again, if it
-        // is on screen
+        // can be
         var thumbnail = (composited ? thumbnails[xid] : null);
 
         // The item's themed icon, loaded once, is sharper than the windows'
@@ -406,18 +408,14 @@ namespace Plank {
       return entries;
     }
 
-    // Captures the next window with a tile that is on screen, keeps its
+    // Captures the next window with a tile that can be captured, keeps its
     // thumbnail and puts it on the tile, one window per pass of the main
     // loop so the popup stays responsive
     bool capture_next () {
-      unowned Wnck.Workspace? workspace = WindowControl.get_wnck_screen ().get_active_workspace ();
-
       while (!pending_captures.is_empty) {
         var window = pending_captures.remove_at (0);
 
-        // A window that closed meanwhile is gone from Wnck, which
-        // is_on_screen () checks first
-        if (!is_on_screen (window, workspace))
+        if (!can_capture (window))
           continue;
 
         var thumbnail = capture (window, thumbnails_width, thumbnails_height);
@@ -443,15 +441,16 @@ namespace Plank {
       pending_captures.clear ();
     }
 
-    // Whether a window is on screen, where its contents can be captured:
-    // neither minimized nor shaded, and on the current workspace. Window
-    // managers with their own hidden state set it only for minimized
-    // windows, so Wnck's HIDDEN doesn't cover shaded ones there
-    static bool is_on_screen (Bamf.Window window, Wnck.Workspace? workspace) {
-      unowned Wnck.Window? wnck_window = WindowControl.get_wnck_window (window.get_xid ());
+    // Whether a window's contents can be captured: it is still known to
+    // Wnck and the X server keeps it viewable. What the window manager does
+    // with minimized, shaded and other workspaces' windows differs, so only
+    // the X server can tell: Cinnamon's keeps minimized windows viewable,
+    // with their contents, while others unmap them, as shading unmaps the
+    // window inside its frame
+    static bool can_capture (Bamf.Window window) {
+      var xid = window.get_xid ();
 
-      return (wnck_window != null && workspace != null && !wnck_window.is_shaded ()
-              && WindowControl.window_is_visible_on_workspace (wnck_window, workspace));
+      return (WindowControl.get_wnck_window (xid) != null && WindowControl.window_is_viewable (xid));
     }
 
     static Gdk.Pixbuf? capture (Bamf.Window window, int max_width, int max_height) {
@@ -515,16 +514,23 @@ namespace Plank {
       var window = find_window (xid);
       unowned Wnck.Workspace? workspace = WindowControl.get_wnck_screen ().get_active_workspace ();
 
-      // Only windows on screen have contents to show, and only with
-      // compositing those of covered windows
-      if (window == null || !popup.get_screen ().is_composited () || !is_on_screen (window, workspace)) {
+      // Only with compositing do covered windows have contents to show,
+      // minimized ones too where the window manager keeps them viewable.
+      // The picture shows where the window is, which only means something
+      // for a window on the current workspace
+      if (window == null || workspace == null || !popup.get_screen ().is_composited () || !can_capture (window)) {
         hide_peek ();
         return;
       }
 
       unowned Wnck.Window? wnck_window = WindowControl.get_wnck_window (window.get_xid ());
+      if (wnck_window == null || !WindowControl.window_is_on_workspace (wnck_window, workspace)) {
+        hide_peek ();
+        return;
+      }
+
       var picture = WindowControl.get_window_thumbnail (window);
-      if (wnck_window == null || picture == null) {
+      if (picture == null) {
         hide_peek ();
         return;
       }

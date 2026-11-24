@@ -62,8 +62,11 @@ namespace Plank {
       set_size_request (width, height);
       resize (width, height);
       move (x, y);
-      show ();
 
+      // The shapes are set before the window maps, so it never takes the
+      // pointer from the previews, even for a moment, which would make
+      // their tiles lose and regain the hover
+      realize ();
       unowned Gdk.Window window = get_window ();
 
       // Nothing of it takes the pointer
@@ -73,6 +76,7 @@ namespace Plank {
       shape.subtract_rectangle ({ keep_clear.x - x, keep_clear.y - y, keep_clear.width, keep_clear.height });
       window.shape_combine_region (shape, 0, 0);
 
+      show ();
       queue_draw ();
     }
 

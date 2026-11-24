@@ -505,6 +505,32 @@ namespace Plank {
     }
 
     /**
+     * Whether a window is viewable, as the X server counts it: mapped, with
+     * all its ancestors mapped. With compositing, a viewable window's
+     * contents can be captured even while other windows cover it. Window
+     * managers like Cinnamon's keep minimized windows viewable, others unmap
+     * them, and an unmapped window's contents are undefined.
+     *
+     * @param xid the window's X id
+     * @return whether the window is viewable, false once it is gone
+     */
+    public static bool window_is_viewable (ulong xid) {
+      unowned Gdk.X11.Display? gdk_display = Gdk.Display.get_default () as Gdk.X11.Display;
+      if (gdk_display == null)
+        return false;
+
+      unowned X.Display display = gdk_display.get_xdisplay ();
+      var attributes = X.WindowAttributes ();
+
+      error_trap_push ();
+      display.get_window_attributes ((X.Window) xid, out attributes);
+      if (error_trap_pop () != 0)
+        return false;
+
+      return (attributes.map_state == X.MapState.IsViewable);
+    }
+
+    /**
      * Whether a window is on a workspace, as the dock counts it for Restrict
      * to Workspace, window dodging and preview captures. On a workspace with
      * viewports that means in its current viewport; on any other, pinned and
